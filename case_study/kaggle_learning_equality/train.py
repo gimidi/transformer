@@ -422,29 +422,29 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------#
     # Scheduler                                                                   #
     # -----------------------------------------------------------------------------#
-    #
-    # train_steps = math.floor((len(train_loader) * config.epochs) / config.gradient_accumulation)
-    # warmup_steps = len(train_loader) * config.warmup_epochs
-    #
-    # if config.scheduler == 'polynomial':
-    #     print('\nScheduler: polynomial - max LR: {} - end LR: {}'.format(config.lr, config.lr_end))
-    #     scheduler = get_polynomial_decay_schedule_with_warmup(optimizer,
-    #                                                           num_training_steps=train_steps,
-    #                                                           lr_end=config.lr_end,
-    #                                                           power=1.5,
-    #                                                           num_warmup_steps=warmup_steps)
-    #
-    # elif config.scheduler == 'constant':
-    #     print('\nScheduler: constant - max LR: {}'.format(config.lr))
-    #     scheduler = get_constant_schedule_with_warmup(optimizer,
-    #                                                   num_warmup_steps=warmup_steps)
-    #
-    # else:
-    #     scheduler = None
-    #
-    # print('Warmup Epochs: {} - Warmup Steps: {}'.format(str(config.warmup_epochs).ljust(2), warmup_steps))
-    # print('Train Epochs:  {} - Train Steps:  {}'.format(config.epochs, train_steps))
-    #
+    
+    train_steps = math.floor((len(train_loader) * config.epochs) / config.gradient_accumulation)
+    warmup_steps = len(train_loader) * config.warmup_epochs
+    
+    if config.scheduler == 'polynomial':
+        print('\nScheduler: polynomial - max LR: {} - end LR: {}'.format(config.lr, config.lr_end))
+        scheduler = get_polynomial_decay_schedule_with_warmup(optimizer,
+                                                              num_training_steps=train_steps,
+                                                              lr_end=config.lr_end,
+                                                              power=1.5,
+                                                              num_warmup_steps=warmup_steps)
+    
+    elif config.scheduler == 'constant':
+        print('\nScheduler: constant - max LR: {}'.format(config.lr))
+        scheduler = get_constant_schedule_with_warmup(optimizer,
+                                                      num_warmup_steps=warmup_steps)
+    
+    else:
+        scheduler = None
+    
+    print('Warmup Epochs: {} - Warmup Steps: {}'.format(str(config.warmup_epochs).ljust(2), warmup_steps))
+    print('Train Epochs:  {} - Train Steps:  {}'.format(config.epochs, train_steps))
+    
     # # -----------------------------------------------------------------------------#
     # Zero Shot                                                                   #
     # -----------------------------------------------------------------------------#
@@ -473,97 +473,97 @@ if __name__ == '__main__':
     # # -----------------------------------------------------------------------------#
     # # Train                                                                       #
     # # -----------------------------------------------------------------------------#
-    # t_train_start = time.time()
-    #
-    # start_epoch = 0
-    # best_score = 0
-    #
-    # # language switch pool without original position 0
-    # pools = config.pool[1:]
-    # current_pool_pointer = 0
-    #
-    # for epoch in range(1, config.epochs + 1):
-    #
-    #     print('\n{}[Epoch: {}]{}'.format(30 * '-', epoch, 30 * '-'))
-    #
-    #     train_loss = train(config,
-    #                        model,
-    #                        dataloader=train_loader,
-    #                        loss_function=loss_function,
-    #                        optimizer=optimizer,
-    #                        scheduler=scheduler,
-    #                        scaler=scaler,
-    #                        teacher=teacher)
-    #
-    #     print('Epoch: {}, Train Loss = {:.3f}, Lr = {:.6f}'.format(epoch,
-    #                                                                train_loss,
-    #                                                                optimizer.param_groups[0]['lr']))
-    #
-    #     print('\n{}[{}]{}'.format(30 * '-', 'Evaluate (Val)', 30 * '-'))
-    #
-    #     f2, precision, recall = evaluate_val(config,
-    #                                          model,
-    #                                          reference_dataloader=val_loader_content,
-    #                                          query_dataloader=val_loader_topic,
-    #                                          gt_dict=gt_dict,
-    #                                          cleanup=True)
-    #
-    #     if f2 > best_score:
-    #         best_score = f2
-    #
-    #         best_checkpoint = '{}/weights_e{}_{:.4f}.pth'.format(model_path, epoch, f2)
-    #
-    #         if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
-    #             torch.save(model.module.state_dict(), best_checkpoint)
-    #         else:
-    #             torch.save(model.state_dict(), best_checkpoint)
-    #
-    #     elif f2 < (0.8 * best_score):
-    #         print('Something went wrong:')
-    #         print(f'Resett to: {best_checkpoint} -> and continue training')
-    #         model_state_dict = torch.load(best_checkpoint)
-    #         if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
-    #             model.module.load_state_dict(model_state_dict, strict=True)
-    #         else:
-    #             model.load_state_dict(model_state_dict, strict=True)
-    #
-    #     if config.sim_sample:
-    #         print('\n{}[{}]{}'.format(30 * '-', 'Evaluate (Train)', 30 * '-'))
-    #         # Set pool for next epoch -> sim sample for that pool
-    #         if len(config.pool) > 1:
-    #             if epoch < config.epoch_stop_switching:
-    #
-    #                 # come back to original pool 0 every uneven epoch
-    #                 if epoch % 2 == 0:
-    #                     next_pool = 0
-    #                 else:
-    #                     next_pool = pools[current_pool_pointer % len(pools)]
-    #                     current_pool_pointer += 1
-    #
-    #                 # set train data for next epoch
-    #                 train_loader_content.dataset.set_pool(next_pool)
-    #                 train_loader_topic.dataset.set_pool(next_pool)
-    #                 train_loader.dataset.set_pool(next_pool)
-    #             else:
-    #                 train_loader_content.dataset.set_pool(0)
-    #                 train_loader_topic.dataset.set_pool(0)
-    #                 train_loader.dataset.set_pool(0)
-    #
-    #         if epoch >= config.sim_sample_start:
-    #             missing_pairs, topic2wrong = evaluate_train(config=config,
-    #                                                         model=model,
-    #                                                         reference_dataloader=train_loader_content,
-    #                                                         query_dataloader=train_loader_topic,
-    #                                                         gt_dict=gt_dict,
-    #                                                         content2topic=train_loader.dataset.content2topic,
-    #                                                         cleanup=True)
-    #
-    #     if config.custom_sampling:
-    #         train_loader.dataset.shuffle(missing_list=missing_pairs,
-    #                                      wrong_dict=topic2wrong,
-    #                                      max_wrong=config.max_wrong)
-    #
-    # if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
-    #     torch.save(model.module.state_dict(), '{}/weights_end.pth'.format(model_path))
-    # else:
-    #     torch.save(model.state_dict(), '{}/weights_end.pth'.format(model_path))
+    t_train_start = time.time()
+    
+    start_epoch = 0
+    best_score = 0
+    
+    # language switch pool without original position 0
+    pools = config.pool[1:]
+    current_pool_pointer = 0
+    
+    for epoch in range(1, config.epochs + 1):
+    
+        print('\n{}[Epoch: {}]{}'.format(30 * '-', epoch, 30 * '-'))
+    
+        train_loss = train(config,
+                           model,
+                           dataloader=train_loader,
+                           loss_function=loss_function,
+                           optimizer=optimizer,
+                           scheduler=scheduler,
+                           scaler=scaler,
+                           teacher=teacher)
+    
+        print('Epoch: {}, Train Loss = {:.3f}, Lr = {:.6f}'.format(epoch,
+                                                                   train_loss,
+                                                                   optimizer.param_groups[0]['lr']))
+    
+        print('\n{}[{}]{}'.format(30 * '-', 'Evaluate (Val)', 30 * '-'))
+    
+        f2, precision, recall = evaluate_val(config,
+                                             model,
+                                             reference_dataloader=val_loader_content,
+                                             query_dataloader=val_loader_topic,
+                                             gt_dict=gt_dict,
+                                             cleanup=True)
+    
+        if f2 > best_score:
+            best_score = f2
+    
+            best_checkpoint = '{}/weights_e{}_{:.4f}.pth'.format(model_path, epoch, f2)
+    
+            if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
+                torch.save(model.module.state_dict(), best_checkpoint)
+            else:
+                torch.save(model.state_dict(), best_checkpoint)
+    
+        elif f2 < (0.8 * best_score):
+            print('Something went wrong:')
+            print(f'Resett to: {best_checkpoint} -> and continue training')
+            model_state_dict = torch.load(best_checkpoint)
+            if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
+                model.module.load_state_dict(model_state_dict, strict=True)
+            else:
+                model.load_state_dict(model_state_dict, strict=True)
+    
+        if config.sim_sample:
+            print('\n{}[{}]{}'.format(30 * '-', 'Evaluate (Train)', 30 * '-'))
+            # Set pool for next epoch -> sim sample for that pool
+            if len(config.pool) > 1:
+                if epoch < config.epoch_stop_switching:
+    
+                    # come back to original pool 0 every uneven epoch
+                    if epoch % 2 == 0:
+                        next_pool = 0
+                    else:
+                        next_pool = pools[current_pool_pointer % len(pools)]
+                        current_pool_pointer += 1
+    
+                    # set train data for next epoch
+                    train_loader_content.dataset.set_pool(next_pool)
+                    train_loader_topic.dataset.set_pool(next_pool)
+                    train_loader.dataset.set_pool(next_pool)
+                else:
+                    train_loader_content.dataset.set_pool(0)
+                    train_loader_topic.dataset.set_pool(0)
+                    train_loader.dataset.set_pool(0)
+    
+            if epoch >= config.sim_sample_start:
+                missing_pairs, topic2wrong = evaluate_train(config=config,
+                                                            model=model,
+                                                            reference_dataloader=train_loader_content,
+                                                            query_dataloader=train_loader_topic,
+                                                            gt_dict=gt_dict,
+                                                            content2topic=train_loader.dataset.content2topic,
+                                                            cleanup=True)
+    
+        if config.custom_sampling:
+            train_loader.dataset.shuffle(missing_list=missing_pairs,
+                                         wrong_dict=topic2wrong,
+                                         max_wrong=config.max_wrong)
+    
+    if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
+        torch.save(model.module.state_dict(), '{}/weights_end.pth'.format(model_path))
+    else:
+        torch.save(model.state_dict(), '{}/weights_end.pth'.format(model_path))
